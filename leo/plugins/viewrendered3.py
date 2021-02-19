@@ -2510,6 +2510,8 @@ class ViewRenderedController3(QtWidgets.QWidget):
         #@@language python
         # Execute code blocks; capture and insert execution results.
         # This means anything written to stdout or stderr.
+        # The paths to known executables are in the exepaths dictionary, which
+        # was loaded at startup from data in the VR3_CONFIG_FILE.
         if self.execute_flag and codelist:
             code = '\n'.join(codelist)
             c = self.c
@@ -2521,7 +2523,7 @@ class ViewRenderedController3(QtWidgets.QWidget):
                 execution_result, err_result = self.exec_code(code, environment)
             # Otherwise check VR3_CONFIG_FILE to see if we know how to run this language
             elif self.controlling_code_lang in exepaths:
-                execution_result, err_result = self.execute_code(self.controlling_code_lang, code)
+                execution_result, err_result = self.ext_execute_code(self.controlling_code_lang, code)
             else:
                 err_result = f"Can't execute {self.controlling_code_lang} today."
 
@@ -2572,8 +2574,20 @@ class ViewRenderedController3(QtWidgets.QWidget):
     # Helper functions to execute non-python languages.
     #@+others
     #@+node:TomP.20210218232648.1: *6* inifile code language
-    def execute_code(self, lang, code):
-
+    def ext_execute_code(self, lang, code):
+        """Execute code using an external processor.
+        
+        The path to the processor will have been stored in
+        the exepath dictionary.
+        
+        ARGUMENTS
+        lang -- a string representing the code language; e.g. 'javascript'.
+        code -- a string containing the code to be run.
+        
+        RETURNS
+        a tuple (result.stdout, result.stderr) with any console output from
+        the external processor.
+        """
         exepath = exepaths[lang]
         progfile='temp_execute.txt'
 
