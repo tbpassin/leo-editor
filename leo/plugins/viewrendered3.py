@@ -1,8 +1,8 @@
 #@+leo-ver=5-thin
-#@+node:TomP.20191215195433.1: * @file viewrendered3.py
+#@+node:TomP.20191215195433.1: * @file ../plugins/viewrendered3.py
 #@@tabwidth -4
 #@@language python
-"""
+r"""
 #@+<< vr3 docstring >>
 #@+node:TomP.20191215195433.2: ** << vr3 docstring >>
 #@@language rest
@@ -11,7 +11,7 @@ Markdown and Asciidoc text, images, movies, sounds, rst, html, jupyter notebooks
 
 #@+others
 #@+node:TomP.20200308230224.1: *3* About
-About Viewrendered3 V3.02
+About Viewrendered3 V3.03b2
 ===========================
 
 The ViewRendered3 plugin (hereafter "VR3") duplicates the functionalities of the
@@ -499,6 +499,7 @@ Enhancements to the RsT stylesheets were adapted from Peter Mills' stylesheet.
 #@+node:TomP.20191215195433.4: ** << imports >>
 #
 # Stdlib...
+from configparser import ConfigParser
 from contextlib import redirect_stdout
 from enum import Enum, auto
 import html
@@ -509,9 +510,11 @@ import os
 import os.path
 import shutil
 import string
+import subprocess
 import sys
 import webbrowser
 from urllib.request import urlopen
+
 #@+at
 #     import warnings
 #     # Ignore *all* warnings.
@@ -520,6 +523,7 @@ from urllib.request import urlopen
 
 # Leo imports...
 import leo.core.leoGlobals as g
+from leo.core.leoApp import LoadManager as LM
 try:
     import leo.plugins.qt_text as qt_text
     import leo.plugins.free_layout as free_layout
@@ -602,6 +606,7 @@ CSS = 'css'
 ENCODING = 'utf-8'
 JAVA = 'java'
 JAVASCRIPT = 'javascript'
+JULIA = 'julia'
 MD = 'md'
 PYPLOT = 'pyplot'
 PYTHON = 'python'
@@ -637,7 +642,7 @@ MD_BASE_STYLESHEET_NAME = 'md_styles.css'
 RST_DEFAULT_STYLESHEET_NAME = 'vr3_rst.css'
 
 # For code rendering
-LANGUAGES = (PYTHON, JAVASCRIPT, JAVA, CSS, XML, SQL)
+LANGUAGES = (PYTHON, JAVASCRIPT, JAVA, JULIA, CSS, XML, SQL)
 TRIPLEQUOTES = '"""'
 TRIPLEAPOS = "'''"
 RST_CODE_INTRO = '.. code::'
@@ -648,6 +653,12 @@ ASCDOC_FENCE_MARKER = '----'
 RST_INDENT = '    '
 SKIPBLOCKS = ('.. toctree::', '.. index::')
 ASCDOC_PYGMENTS_ATTRIBUTE = ':source-highlighter: pygments'
+
+_in_code_block = False
+
+VR3_DIR = 'vr3'
+VR3_CONFIG_FILE = 'vr3_config.ini'
+EXECUTABLES_SECTION = 'executables'
 
 #@-<< declarations >>
 
@@ -722,6 +733,28 @@ def find_exe(exename):
 asciidoctor_exec = find_exe('asciidoc') or None
 asciidoc3_exec = find_exe('asciidoc3') or None
 pandoc_exec = find_exe('pandoc') or None
+#@+node:TomP.20210218231600.1: ** Find executables in VR3_CONFIG_FILE
+#@@language python
+# Get paths for executables from the VR3_CONFIG_FILE file
+lm = LM()
+leodir = g.app.homeLeoDir
+
+# leodir will contain the unix separator "/" even on Windows
+# so fix it if needed.
+if os.sep != '/':
+    leodir = leodir.replace('/', os.sep)
+
+inifile = os.path.join(leodir, VR3_DIR, VR3_CONFIG_FILE)
+inifile_exists = os.path.exists(inifile)
+
+exepaths = {}
+if inifile_exists:
+    config=ConfigParser()
+    config.read(inifile)
+    if config.has_section(EXECUTABLES_SECTION):
+        exepaths = dict(config[EXECUTABLES_SECTION])
+else:
+    g.es(f"Can't find {inifile} so VR3 cannot execute non-Python code")
 #@+node:TomP.20191215195433.7: ** vr3.Top-level
 #@+node:TomP.20191215195433.8: *3* vr3.decorate_window
 def decorate_window(w):
@@ -1116,6 +1149,8 @@ class ViewRenderedController3(QtWidgets.QWidget):
     #@+node:TomP.20200329223820.1: *3* vr3.ctor & helpers
     def __init__(self, c, parent=None):
         """Ctor for ViewRenderedController class."""
+        global _in_code_block
+
         self.c = c
         # Create the widget.
         QtWidgets.QWidget.__init__(self) # per http://enki-editor.org/2014/08/23/Pyqt_mem_mgmt.html
@@ -1526,6 +1561,8 @@ class ViewRenderedController3(QtWidgets.QWidget):
             _root = pc.current_tree_root or p
         else:
             _root = p
+
+        self.controlling_code_lang = None
 
         if tag in ('show-scrolled-message',):
             # If we are called as a "scrolled message" - usually for display of
@@ -2431,6 +2468,8 @@ class ViewRenderedController3(QtWidgets.QWidget):
         """
 
         # pylint: disable=R0914 # Too many local variables
+        # pylint: disable=R0912 # too-many-branches
+
         #@+others
         #@+node:TomP.20200105214716.1: *6* vr3.setup
         #@@language python
@@ -2476,8 +2515,15 @@ class ViewRenderedController3(QtWidgets.QWidget):
             c = self.c
             environment = {'c': c, 'g': g, 'p': c.p} # EKR: predefine c & p.
 
-            # Assumes Python code will be executed
-            execution_result, err_result = self.exec_code(code, environment)
+            execution_result = err_result = ''
+
+            if self.controlling_code_lang == PYTHON:
+                execution_result, err_result = self.exec_code(code, environment)
+            # Otherwise check VR3_CONFIG_FILE to see if we know how to run this language
+            elif self.controlling_code_lang in exepaths:
+                execution_result, err_result = self.execute_code(self.controlling_code_lang, code)
+            else:
+                err_result = f"Can't execute {self.controlling_code_lang} today."
 
             # Format execution result
             ex = execution_result.split('\n') if execution_result.strip() else []
@@ -2522,6 +2568,24 @@ class ViewRenderedController3(QtWidgets.QWidget):
         #@-others
 
 
+    #@+node:TomP.20210218003018.1: *5* execution helpers
+    # Helper functions to execute non-python languages.
+    #@+others
+    #@+node:TomP.20210218232648.1: *6* inifile code language
+    def execute_code(self, lang, code):
+
+        exepath = exepaths[lang]
+        progfile='temp_execute.txt'
+
+        with open(progfile,'w', encoding=ENCODING) as f:
+            f.write(code)
+
+        cmd = f'{exepath} {progfile}'
+        # We don't care about the return code here, so:
+        # pylint: disable=W1510 # Using subprocess.run without explicitly set `check`
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+        return result.stdout, result.stderr
+    #@-others
     #@+node:TomP.20200112103934.1: *5* process_rst_node
     #@@language python
     def process_rst_node(self, s):
@@ -2559,6 +2623,8 @@ class ViewRenderedController3(QtWidgets.QWidget):
                 _lang = PYTHON # Standard RsT default.
             _tag = CODE if _lang in LANGUAGES else TEXT
             _in_code_block = _tag == CODE
+            if _tag == CODE and not self.controlling_code_lang:
+                self.controlling_code_lang = _lang
 
             return _lang, _tag
 
@@ -2718,6 +2784,8 @@ class ViewRenderedController3(QtWidgets.QWidget):
                 _language = line.split()[1]
                 _in_rst_block = False
                 _in_code_block = _language in LANGUAGES
+                if _in_code_block and not self.controlling_code_lang:
+                    self.controlling_code_lang = _language if _in_code_block  else None
             #@-<< identify_code_blocks >>
             #@+<< fill_chunks >>
             #@+node:TomP.20200112103729.5: *7* << fill_chunks >>
