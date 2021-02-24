@@ -2573,7 +2573,7 @@ class ViewRenderedController3(QtWidgets.QWidget):
     #@+node:TomP.20210218003018.1: *5* execution helpers
     # Helper functions to execute non-python languages.
     #@+others
-    #@+node:TomP.20210218232648.1: *6* inifile code language
+    #@+node:TomP.20210218232648.1: *6* ext_execute_code
     def ext_execute_code(self, lang, code):
         """Execute code using an external processor.
         
@@ -2589,7 +2589,7 @@ class ViewRenderedController3(QtWidgets.QWidget):
         the external processor.
         """
         exepath = exepaths[lang]
-        progfile='temp_execute.txt'
+        progfile='_##temp_execute.txt'
 
         with open(progfile,'w', encoding=ENCODING) as f:
             f.write(code)
