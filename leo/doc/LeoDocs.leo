@@ -498,7 +498,7 @@
 <v t="ekr.20131017094004.16739"><vh>How to...</vh>
 <v t="ekr.20090401113141.1"><vh>How to generate odt/rtf/pdf files</vh>
 <v t="ekr.20090620131445.5595"><vh>Post from ville</vh></v>
-<v t="ekr.20090401113141.2"><vh>@rst c:/test/test.html</vh>
+<v t="ekr.20090401113141.2"><vh>@rst test.html</vh>
 <v t="ekr.20090401113141.4"><vh>section 1</vh></v>
 </v>
 </v>
@@ -5569,10 +5569,13 @@ If successful, match_eol_span highlights from i to the end of the line with the 
         at_whitespace_end = False,
         at_word_start = False,
         exclude_match = False):
+        
+At present match_mark_previous does nothing (always returns 0).
+Its use is deprectated.
 
-match_mark_previous succeeds if s[i:].startswith(pattern),and the at_line_start, at_whitespace_end and at_word_start conditions are all satisfied.
+..  match_mark_previous succeeds if s[i:].startswith(pattern),and the at_line_start, at_whitespace_end and at_word_start conditions are all satisfied.
 
-If successful, match_mark_previous colors from the end of the previous token to i with the color specified by kind. If the exclude_match argument is True, only the text before the matched text will be colored.
+..  If successful, match_mark_previous colors from the end of the previous token to i with the color specified by kind. If the exclude_match argument is True, only the text before the matched text will be colored.
 </t>
 <t tx="ekr.20060503064515">.. _`Ruleset name`: `Ruleset names`_
 
