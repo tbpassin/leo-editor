@@ -11,7 +11,7 @@ Markdown and Asciidoc text, images, movies, sounds, rst, html, jupyter notebooks
 
 #@+others
 #@+node:TomP.20200308230224.1: *3* About
-About Viewrendered3 V3.03b2
+About Viewrendered3 V3.1b1
 ===========================
 
 The ViewRendered3 plugin (hereafter "VR3") duplicates the functionalities of the
@@ -26,6 +26,8 @@ the plugin can:
     #. Display just the code blocks;
     #. Colorize code blocks;
     #. Execute Python code in the code blocks;
+    #. Execute non-Python code blocks for certain languages.  Command line
+       parameters can be passed to these language processors.
     #. Insert the print() output of an execution at the bottom of the rendered display;
     #. Identify code blocks by either an @language directive or by the code block
        syntax normally used by RsT, MD, or Asciidoc (e.g., code fences for MD);
@@ -80,9 +82,15 @@ Limitations and Quirks
        With MD, mathematical symbols are not rendered without MathJax.
 
     #. Code blocks for several programming languages can be colorized, even
-       within a single node.  But only Python blocks can be executed.  Blocks
-       intended for another language (such as javascript) will cause syntax
-       errors if an attempt is made to execute the node.
+       within a single node.  Python, and certain other languages can be
+       executed if they have been installed.  Python code blocks are
+       executed with a Leo environment the includes the standard Leo
+       variables c, g, and c.p.
+
+    #. All code blocks in a node or subtree must contain the same code language 
+       or they cannot be executed.
+
+    #. Non-Python code can currently only be executed in RsT trees.
 
     #. Text nodes and subtrees that have no language specified are rendered as
        preformated text.  They cannot be executed.
@@ -263,7 +271,34 @@ directive can be used::
 
     @image url-or-file_url-or-data_url
 
+\@param - Specify parameter(s) to be passed to a non-Python language processor.
+-------------------------------------------------------------------------------
+The `@param` directive specifies command-line parameters to be passed
+to an external language processor.  These parameters will be inserted
+between the name of the processor and the name of a temporary file that
+VR3 will write the program code to.
 
+For example if we include the following directives::
+
+    @language julia
+    @param -q
+
+then the julia processor will be invoked with the command line::
+
+    <path-to-julia> -q <progfile>
+
+Any number of parameters may be included on one @param line, and
+multiple @param directives are allowed.
+
+Only @param directives that occur inside a code block are recognized.  Thus the following @param directive is not recognized because it is
+outside a code block::
+
+    @language rest
+    @param -q
+
+    @language julia
+    # code to execute
+    # ...
 #@+node:TomP.20200115200601.1: *4* Rendering reStructuredText
 Rendering reStructuredText
 ==========================
@@ -405,7 +440,61 @@ Colorized Languages
 ===================
 
 Currently the languages that can be colorized are python, javascript,
-java, css, xml, and sql.
+java, julia, css, xml, and sql.
+
+#@+node:TomP.20210225000326.1: *3* Code Execution
+Code that occurs inside one or more code blocks can be executed.
+Execution is initiated when the "Execute" button on the
+VR3 toolbar is pressed.  Output from the processor to stdout and 
+stderr is displayed under the node (or last node of a subtree).
+
+A node may contain multiple code blocks, but they can only successfully
+be executed if they are all for the same code language.
+
+Command line parameters can be specified using one or more `@param`
+directives (see above at Structured Languages/Special Directives).
+
+Python code will be executed within a Leo environment that includes
+the standard Leo variables g, c, and c.p.  Thus, Leo-specific
+commands like g.es() can be invoked.
+
+If View Options/Entire Tree is checked on the VR3 toolbar, then
+all code blocks in the current node and all its child nodes
+(to any nesting depth) will be executed.  Otherwise only the current
+node will be executed.
+
+If only the current node is to be executed, note that if imports occur or variables are declared in a parent node, then execution of the
+will fail because the current node being executed will not know
+about them.
+
+Processor output for stdout (i.e., print() statements, etc. and
+stderr are captured and displayed inline below the code.
+
+Non-Python code can be executed if
+
+    #. A language processor for the target language has been installed
+       on the computer;
+
+    #. The processor invokes a program using a command line like thus::
+
+        <path-to-processor> [parameters] <program file>
+
+The full path to non-Python processors is specified in a configuration
+file located in Leo's home directory, `.leo`.  This file is at::
+
+    .leo/vr3/r3_config.ini
+
+The language processor(s) must be defined in an ``[executables]`` section
+of the configuration file, like this::
+
+    [executables]
+    javascript = D:\usr\graalvm-ce-java11-20.0.0\languages\js\bin\js.exe
+    julia = C:\Users\tom\AppData\Local\Programs\Julia 1.5.3\bin\julia.exe
+
+The names of the languages **must** be spelled exactly as they are used
+in `@language` directives.
+
+The languages that can currently be used are `javascript` and `julia`.  This list may be expanded in the future.
 
 #@+node:TomP.20200115200704.1: *3* Special Renderings
 Special Renderings
@@ -1563,6 +1652,7 @@ class ViewRenderedController3(QtWidgets.QWidget):
             _root = p
 
         self.controlling_code_lang = None
+        self.params = []
 
         if tag in ('show-scrolled-message',):
             # If we are called as a "scrolled message" - usually for display of
@@ -2594,9 +2684,12 @@ class ViewRenderedController3(QtWidgets.QWidget):
         with open(progfile,'w', encoding=ENCODING) as f:
             f.write(code)
 
-        cmd = f'{exepath} {progfile}'
-        # We don't care about the return code here, so:
-        # pylint: disable=W1510 # Using subprocess.run without explicitly set `check`
+        cmd = [exepath]
+        cmd.extend(self.params)
+        cmd.append(progfile)
+
+        # We are not checking the return code here, so:
+        # pylint: disable=W1510 # Using subprocess.run without explicitly setting `check`
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
         return result.stdout, result.stderr
     #@-others
@@ -2740,9 +2833,13 @@ class ViewRenderedController3(QtWidgets.QWidget):
             #@-<< handle_ats >>
             #@+<< handle at-image >>
             #@+node:TomP.20200416153716.1: *7* << handle at-image >>
-            # Detect @image directive and insert RsT code for it
+            # Handle @image and @param directives.
+            # param format: space separated words, stored in self.params 
+            # as a list of the words.
+
             if not _in_code_block:
                 if line.startswith('@image'):
+                    # insert RsT code for image
                     fields = line.split(' ', 1)
                     if len(fields) > 1:
                         url = fields[1]
@@ -2750,6 +2847,14 @@ class ViewRenderedController3(QtWidgets.QWidget):
                     else:
                         # No url for an image: ignore and skip to next line
                         continue
+            else:
+                if line.startswith('@param'):
+                    # Will add nothing if no params on the line.
+                    params = line.split()
+                    if len(params) > 1:
+                        params = params[1:]
+                        self.params.extend(params)
+                    continue
             #@-<< handle at-image >>
             #@+<< identify_code_blocks >>
             #@+node:TomP.20200112103729.3: *7* << identify_code_blocks >>
