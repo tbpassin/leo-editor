@@ -213,18 +213,22 @@ class AtFile:
                 if not ok:
                     g.error(f"Did not create default directory: {defaultDirectory}")
                     return None
+            return g.os_path_realpath(
+                                       g.os_path_finalize_join(defaultDirectory, targetFileName))
         # #1341 and #1450.
-        targetFileName = c.expand_path_expression(targetFileName)
         if targetFileName:
+            targetFileName = c.expand_path_expression(targetFileName)
             theDir = g.os_path_dirname(targetFileName)
             if theDir and make_dirs:
                 ok = g.makeAllNonExistentDirectories(theDir)
                 if not ok:
                     g.trace(f"Did not create {theDir} for {targetFileName}")
                     return None
-        # #1341.
-        return g.os_path_realpath(
-            g.os_path_finalize_join(defaultDirectory, targetFileName))
+            # #1341.
+            return g.os_path_realpath(
+                                       g.os_path_finalize_join(theDir, targetFileName))
+        else:
+            return None
     #@+node:ekr.20041005105605.17: *3* at.Reading
     #@+node:ekr.20041005105605.18: *4* at.Reading (top level)
     #@+node:ekr.20070919133659: *5* at.checkExternalFile
