@@ -78,7 +78,6 @@ class AtFile:
     def initCommonIvars(self):
         """
         Init ivars common to both reading and writing.
-
         The defaults set here may be changed later.
         """
         at = self
@@ -159,6 +158,9 @@ class AtFile:
         Return the finalized name of the output file.
         """
         at, c = self, self.c
+        if not c and c.config:
+            return None
+        make_dirs = c.config.create_nonexistent_directories
         assert root
         self.initCommonIvars()
         assert at.checkPythonCodeOnWrite is not None
@@ -202,16 +204,27 @@ class AtFile:
         #
         # #1907: Compute the file name and create directories as needed.
         targetFileName = g.os_path_realpath(g.fullPath(c, root))
+        at.targetFileName = targetFileName  # For at.writeError only.
+        #
+        # targetFileName can be empty for unit tests & @command nodes.
+        if not targetFileName:
+            targetFileName = root.h if g.unitTesting else None
+            at.targetFileName = targetFileName  # For at.writeError only.
+            return targetFileName
+        #
+        # Do nothing more if the file already exists.
+        if os.path.exists(targetFileName):
+            return targetFileName
+        #
+        # Create directories if enabled.
         root_dir = g.os_path_dirname(targetFileName)
-        make_dirs = c and c.config and c.config.create_nonexistent_directories
         if make_dirs and root_dir:
             ok = g.makeAllNonExistentDirectories(root_dir)
             if not ok:
-                g.error(f"Did not create directory: {root_dir}")
+                g.error(f"Error creating directories: {root_dir}")
                 return None
-                
-        at.targetFileName = targetFileName
-            # For at.writeError only.
+        #
+        # Return the target file name, regardless of future problems.
         return targetFileName
     #@+node:ekr.20041005105605.17: *3* at.Reading
     #@+node:ekr.20041005105605.18: *4* at.Reading (top level)
@@ -343,7 +356,6 @@ class AtFile:
     def deleteUnvisitedNodes(self, root, redraw=True):
         """
         Delete unvisited nodes in root's subtree, not including root.
-
         Before Leo 5.6: Move unvisited node to be children of the 'Resurrected
         Nodes'.
         """
@@ -779,14 +791,12 @@ class AtFile:
         '''
         Carefully sets at.encoding, then uses at.encoding to convert the file
         to a unicode string.
-
         Sets at.encoding as follows:
         1. Use the BOM, if present. This unambiguously determines the encoding.
         2. Use the -encoding= field in the @+leo header, if present and valid.
         3. Otherwise, uses existing value of at.encoding, which comes from:
             A. An @encoding directive, found by at.scanAllDirectives.
             B. The value of c.config.default_derived_file_encoding.
-
         Returns the string, or None on failure.
         '''
         at = self
@@ -866,9 +876,7 @@ class AtFile:
     def scanHeader(self, fileName, giveErrors=True):
         """
         Scan the @+leo sentinel, using the old readLine interface.
-
         Sets self.encoding, and self.start/endSentinelComment.
-
         Returns (firstLines,new_df,isThinDerivedFile) where:
         firstLines        contains all @first lines,
         new_df            is True if we are reading a new-format derived file.
@@ -892,10 +900,8 @@ class AtFile:
     def scanFirstLines(self, firstLines):
         '''
         Append all lines before the @+leo line to firstLines.
-
         Empty lines are ignored because empty @first directives are
         ignored.
-
         We can not call sentinelKind here because that depends on the comment
         delimiters we set here.
         '''
@@ -909,7 +915,6 @@ class AtFile:
     def scanHeaderForThin(self, fileName):
         '''
         Return true if the derived file is a thin file.
-
         This is a kludgy method used only by the import code.'''
         at = self
         at.readFileToUnicode(fileName)
@@ -1683,7 +1688,6 @@ class AtFile:
     def stringToString(self, root, s, forcePythonSentinels=True, sentinels=True):
         """
         Write an external file from a string.
-
         This is at.write specialized for scripting.
         """
         at, c = self, self.c
@@ -2168,7 +2172,6 @@ class AtFile:
     def putLeadInSentinel(self, s, i, j, delta):
         """
         Set at.leadingWs as needed for @+others and @+<< sentinels.
-
         i points at the start of a line.
         j points at @others or a section reference.
         delta is the change in at.indent that is about to happen and hasn't happened yet.
@@ -2460,7 +2463,6 @@ class AtFile:
     def os(self, s):
         """
         Append a string to at.outputList.
-
         All output produced by leoAtFile module goes here.
         """
         at = self
@@ -2559,7 +2561,6 @@ class AtFile:
     def putDirective(self, s, i, p):
         r'''
         Output a sentinel a directive or reference s.
-
         It is important for PHP and other situations that \@first and \@last
         directives get translated to verbatim lines that do *not* include what
         follows the @first & @last directives.
@@ -2624,7 +2625,6 @@ class AtFile:
     def putIndent(self, n, s=''):
         """Put tabs and spaces corresponding to n spaces,
         assuming that we are at the start of a line.
-
         Remove extra blanks if the line starts with the underindentEscapeString"""
         tag = self.underindentEscapeString
         if s.startswith(tag):
