@@ -7,63 +7,92 @@ r"""
 #@+node:TomP.20191215195433.2: ** << vr3 docstring >>
 #@@language rest
 #@@nocolor
-Creates a window for live rendering of reSTructuredText,
-Markdown and Asciidoc text, images, movies, sounds, rst, html, jupyter notebooks, etc.
+#@@pagewidth 65
+
+Creates a window for live rendering of reSTructuredText, Markdown
+and Asciidoc text, images, movies, sounds, rst, html, jupyter
+notebooks, etc.
 
 #@+others
 #@+node:tom.20240521004125.1: *3* About
 About Viewrendered3 V5.04
 ===========================
 
-The ViewRendered3 plugin (hereafter "VR3") renders Restructured Text (RsT),
-Markdown (MD), and Asciidoc (nodes and subtrees) in a separate pane.
-it duplicates and extendes the functionality of the ViewRendered plugin.  The plugin can:
+The ViewRendered3 plugin (hereafter "VR3") renders Restructured
+Text (RsT), Markdown (MD), and Asciidoc (nodes and subtrees) in a
+separate pane. it duplicates and extendes the functionality of
+the ViewRendered plugin. The plugin can:
 
     #. Render entire subtrees starting at the selected node;
     #. Render code and literal blocks in a visually distinct way;
-    #. Any number of code blocks can be intermixed with RsT, MD, or Asciidoc in
-       a single node.
+    #. Any number of code blocks can be intermixed with RsT, MD,
+       or Asciidoc in a single node.
     #. Display just the code blocks;
     #. Colorize code blocks;
-    #. Execute Python code in the code blocks;
-    #. Execute non-Python code blocks for certain languages.  Command line
-       parameters can be passed to these language processors. [RsT only]
-    #. Insert the print() output of an execution at the bottom of the rendered display;
-    #. Identify code blocks by either an @language directive or by the code block
-       syntax normally used by RsT, MD, or Asciidoc (e.g., code fences for MD);
-    #. Honor "@" and "@c" directives to ignore all lines between them;
-    #. Insert an image using the ``@image`` directive in addition to the image
-       syntax for the structured text in use.
+    #. Execute Python code in the code blocks;    
+    #. Execute non-Python code blocks for certain languages.
+       Command line parameters can be passed to these language
+       processors. [RsT only]
+    #. Insert the print() output of an execution at the bottom of
+       the rendered display;
+
+    #. Identify code blocks by either an @language directive or
+       by the code block syntax normally used by RsT, MD, or
+       Asciidoc (e.g., code fences for MD);
+
+    #. Honor "@" and "@c" directives to ignore all lines between
+       them;
+
+    #. Insert an image using the ``@image`` directive in addition
+       to the image syntax for the structured text in use.
+
     #. Export the rendered node or subtree to the system browser;
+
     #. Export the generated markup to a chosen text editor.
-    #. Optionally render mathematics symbols and equations using MathJax.
-    #. While an entire subtree rendering is visible, the display can be locked
-       so that the entire tree shows even while a single node is being edited.
-    #. When an entire subtree is rendered, and editing is being done in one
-       node, the display can be frozen (no changes will be displayed) if
-       necessary to avoid excessive delay in re-rendering, or visual anomalies.
-    #. The default rendering language for a node can be selected to by one of
-       "RsT", "MD", "Asciidoc", or "TEXT".  This setting applies when the node
-       or subtree has no @rst or @md headline.
-    #. Display a node's headline text as the overall heading for the rendering.
-       However, if the first line of a node exactly equals the headline text
-       (not counting a directive like "@rst"), only one copy of that heading
-       will be displayed.
+
+    #. Optionally render mathematics symbols and equations using    
+       MathJax.
+
+    #. While an entire subtree rendering is visible, the display
+       can be locked so that the entire tree shows even while a
+       single node is being edited.
+
+    #. When an entire subtree is rendered, and editing is being
+       done in one node, the display can be frozen (no changes
+       will be displayed) if necessary to avoid excessive delay
+       in re-rendering, or visual anomalies.
+
+    #. The default rendering language for a node can be selected
+       to by one of "RsT", "MD", "Asciidoc", or "TEXT". This
+       setting applies when the node or subtree has no @rst or
+       @md headline.
+
+    #. Display a node's headline text as the overall heading for
+       the rendering. However, if the first line of a node
+       exactly equals the headline text (not counting a directive
+       like "@rst"), only one copy of that heading will be
+       displayed.
 
 A number of other special types of nodes can be rendered (see the
 section `Special Renderings`_.
 
-@setting nodes in an @settings tree can modify the behavior of the plugin.
+\@setting nodes in an @settings tree can modify the behavior of
+the plugin.
 
 New With This Version
 ======================
-Showing a plugin's docstring using the Plugin menu now works right the first time.
+
+Showing a plugin's docstring using the Plugin menu now works
+right the first time.
 
 Previous Recent Changes
 ========================
 The "vr3" command and the default opening positions have been changed:
 
-The default value of the setting *@string vr3-initial-orientation* is now _"in-body".  This will open VR3 next to the body editor (or below if Leo's layout orientation has been changed to "vertical". 
+The default value of the setting *@string
+vr3-initial-orientation* is now _"in-body". This will open VR3
+next to the body editor (or below if Leo's layout orientation has
+been changed to "vertical".
 
 For any other value of the setting VR3 will open:
 
@@ -71,9 +100,11 @@ For any other value of the setting VR3 will open:
 - In the Log frame if the orientation is "vertical".
 
 Removed diagnostic line that change the clipboard contents.
-Corrected errors introduced in a complicated merge: ASCIIDOC, MD, and RsT images
-display correctly when the exported file is viewed in the browser (relative
-paths are converted to absolute file system paths).
+Corrected errors introduced in a complicated merge:
+
+    ASCIIDOC, MD, and RsT images display correctly when the
+    exported file is viewed in the browser (relative paths are
+    converted to absolute file system paths).
 
 The display code has been adapted to Leo's new splitter/layout infrastructure.
 
@@ -83,45 +114,57 @@ In @jupyter nodes, for the path to the jupyter file or url:
     These changes let a path copied to the clipboard from the file manager work without user editing.
 
 Bug fixes:
-- Quit early if no qt gui.
-- Fix messags with "VR4" to read "VR3".
 
-#@@language plain is equivalent to @language text.
-VR3 can now open either in a pane in the splitter (up until now this is been the
-only location) or in a tab in the log frame.  Two new commands give access to
-the tab: *vr3-tab* and *vr3-toggle-tab*.
+    - Quit early if no qt gui.
+    - Fix messags with "VR4" to read "VR3".
 
-*@*/*@c* now work correctly for ReStructuredText for multiline strings.  This
-fix makes them work the same way for all three structured languages: *rest*,
-*md*, and *asciidoc*.
+`@language plain` is equivalent to `@language text`.
+
+VR3 can now open either in a pane in the splitter (up until now
+this is been the only location) or in a tab in the log frame. Two
+new commands give access to the tab: *vr3-tab* and
+*vr3-toggle-tab*.
+
+*@*/*@c* now work correctly for ReStructuredText for multiline
+strings. This fix makes them work the same way for all three
+structured languages: *rest*, *md*, and *asciidoc*.
 
 
-For both plain and text, an @language directive at the top of a node is removed.
+For both plain and text, an @language directive at the top of a
+node is removed.
 
-For both plain and text, the command *vr3-open-markup-in-editor* can display
-the entire subtree's text when that option is active.
+For both plain and text, the command *vr3-open-markup-in-editor*
+can display the entire subtree's text when that option is active.
 
-An external Ruby asciidoctor processor is found more reliably.  The complete
-path to the processor can be specified in the *vr3-prefer-external* setting
-(sometimes Ruby can be installed into a location not on the PATH).
+An external Ruby asciidoctor processor is found more reliably.
+The complete path to the processor can be specified in the
+*vr3-prefer-external* setting (sometimes Ruby can be installed
+into a location not on the PATH).
 
 Asciidoctor enhancements
 
-    - New setting to suppress the default footer (``@bool vr3-asciidoctor-nofooter = True``).
-    - Set default directory for asciidoctor icons (``@string vr3-asciidoctor-icons=''``).
-    - Set default image directory (``@string vr3-asciidoctor-imagesdir=''``).
+    - New setting to suppress the default footer (``@bool
+      vr3-asciidoctor-nofooter = True``).
+      
+    - Set default directory
+      for asciidoctor icons (``@string vr3-asciidoctor-icons=''``).
+
+    - Set default image directory (``@string
+      vr3-asciidoctor-imagesdir=''``).
 
 The Dart programming language is now supported.
 
 New minibuffer commands *vr3-freeze* and *vr3-unfreeze*.
 
-Improved detection of the notebook URL in *@jupyter* nodes.  The URL no longer
-has to be the second item in the headline after the string "@jupyter".  If
-a URL is not found in the headline, the first line of the body is tried.
+Improved detection of the notebook URL in *@jupyter* nodes. The
+URL no longer has to be the second item in the headline after the
+string "@jupyter". If a URL is not found in the headline, the
+first line of the body is tried.
 
-Fix commands "vr3-lock", "vr3-unlock", "vr3-lock-unlock-tree" so that they
-correctly lock or unlock the rendering to the current subtree, including
-changing the checked/unchecked character of the toolbar menu "locked to tree" item.
+Fix commands "vr3-lock", "vr3-unlock", "vr3-lock-unlock-tree" so
+that they correctly lock or unlock the rendering to the current
+subtree, including changing the checked/unchecked character of
+the toolbar menu "locked to tree" item.
 
 Correct Asciidoc rendering bug when rendering entire tree.
 
@@ -131,11 +174,13 @@ Mathjax, html pages with script imports work with PyQt6.
 
 Added new command *vr3-render-html-from-clip*.
 
-Added Lua to the list of supported languages.  Lua programs can be syntax-colored
-and executed using the ``@language lua`` directive. For Lua programs to be executable,
-the path to a Lua processor must be added to the *.leo/vr3/vr3_config.ini* file.
+Added Lua to the list of supported languages. Lua programs can be
+syntax-colored and executed using the ``@language lua``
+directive. For Lua programs to be executable, the path to a Lua
+processor must be added to the *.leo/vr3/vr3_config.ini* file.
 
-Added a line similar to the following to the *[executables]* section::
+Added a line similar to the following to the *[executables]*
+section::
 
     lua = C:\Program Files (x86)\Lua\5.1\lua.exe
 #@+node:TomP.20200309205046.1: *3* Compatibility
